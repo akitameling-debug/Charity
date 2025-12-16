@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate, formatTime } from '@/lib/utils'
+import type { Database } from '@/types/database.types'
 import {
   Calendar,
   MapPin,
@@ -28,6 +29,31 @@ interface UpcomingMatch {
   partner_name?: string
   court_slot?: number
 }
+
+type TeamLite = Pick<Database['public']['Tables']['teams']['Row'], 'id' | 'name'>
+type MembershipLite =
+  Pick<Database['public']['Tables']['roster_members']['Row'], 'id' | 'team_id'> & {
+    teams: TeamLite | null
+  }
+
+type MatchLite =
+  Pick<
+    Database['public']['Tables']['matches']['Row'],
+    'id' | 'date' | 'time' | 'opponent_name' | 'venue' | 'is_home' | 'team_id'
+  > & {
+    teams: Pick<TeamLite, 'name'> | null
+  }
+
+type LineupLite =
+  Pick<
+    Database['public']['Tables']['lineups']['Row'],
+    'match_id' | 'court_slot' | 'player1_id' | 'player2_id' | 'is_published'
+  > & {
+    player1: { id: string; full_name: string } | null
+    player2: { id: string; full_name: string } | null
+  }
+
+type AvailabilityRow = Database['public']['Tables']['availability']['Row']
 
 export default function HomePage() {
   const [nextMatch, setNextMatch] = useState<UpcomingMatch | null>(null)
@@ -60,6 +86,7 @@ export default function HomePage() {
       `)
       .eq('user_id', user.id)
       .eq('is_active', true)
+      .returns<MembershipLite[]>()
 
     if (!memberships || memberships.length === 0) {
       setLoading(false)
@@ -90,6 +117,7 @@ export default function HomePage() {
       .order('date', { ascending: true })
       .order('time', { ascending: true })
       .limit(10)
+      .returns<MatchLite[]>()
 
     if (!matches) {
       setLoading(false)
@@ -118,12 +146,14 @@ export default function HomePage() {
       `)
       .in('match_id', matchIds)
       .eq('is_published', true)
+      .returns<LineupLite[]>()
 
     const { data: availabilities } = await supabase
       .from('availability')
       .select('*')
       .in('match_id', matchIds)
       .in('roster_member_id', rosterMemberIds)
+      .returns<AvailabilityRow[]>()
 
     // Process matches with status
     const processedMatches: UpcomingMatch[] = matches.map(match => {

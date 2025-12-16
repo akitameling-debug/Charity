@@ -37,6 +37,17 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  transpilePackages: ['@supabase/ssr', '@supabase/supabase-js'],
+  webpack: (config) => {
+    // Force Supabase JS to use its CommonJS entrypoint to avoid the ESM wrapper default-export error.
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      // `require.resolve('@supabase/supabase-js')` respects the package "exports" map (require condition).
+      '@supabase/supabase-js': require.resolve('@supabase/supabase-js'),
+    };
+    return config;
+  },
 };
 
 module.exports = withPWA(nextConfig);
