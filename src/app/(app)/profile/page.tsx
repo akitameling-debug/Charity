@@ -54,9 +54,11 @@ export default function ProfilePage() {
 
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('*')
+      .select(
+        'id, email, full_name, phone, ntrp_rating, avatar_url, availability_defaults, created_at, updated_at'
+      )
       .eq('id', user.id)
-      .single()
+      .single<Profile>()
 
     if (profileData) {
       setProfile(profileData)
@@ -70,11 +72,14 @@ export default function ProfilePage() {
 
     const { data: reservationsData } = await supabase
       .from('court_reservations')
-      .select('*')
+      .select(
+        'id, user_id, venue_name, court_number, date, start_time, end_time, notes, created_at, updated_at'
+      )
       .eq('user_id', user.id)
       .gte('date', new Date().toISOString().split('T')[0])
       .order('date', { ascending: true })
       .limit(5)
+      .returns<CourtReservation[]>()
 
     if (reservationsData) {
       setReservations(reservationsData)

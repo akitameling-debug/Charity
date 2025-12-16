@@ -40,9 +40,14 @@ export default function TeamsPage() {
       .select('teams(*)')
       .eq('user_id', user.id)
 
+    const memberTeamList =
+      (memberTeams
+        ?.flatMap((m: any) => (Array.isArray(m?.teams) ? m.teams : [m?.teams]))
+        .filter(Boolean) as unknown as Team[]) || []
+
     const allTeams = [
       ...(captainTeams || []),
-      ...(memberTeams?.map(m => m.teams).filter(Boolean) as Team[] || [])
+      ...memberTeamList,
     ]
 
     // Remove duplicates
